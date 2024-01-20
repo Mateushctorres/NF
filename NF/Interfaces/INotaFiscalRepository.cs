@@ -8,8 +8,7 @@ namespace NF.Interfaces
 
         NotaFiscal GetNotaFiscal(int id);
         bool NotaFiscalExiste(int id);
-        bool CreateNotaFiscal(int id, NotaFiscal notaFiscal);
-        bool UpdateNotaFiscal(int id, NotaFiscal notaFiscal);
+        bool CreateNotaFiscal(NotaFiscal notaFiscal);
         bool DeleteNotaFiscal(NotaFiscal notaFiscal);
         bool Save();
 

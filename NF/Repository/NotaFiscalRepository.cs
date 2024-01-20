@@ -17,7 +17,13 @@ namespace NF.Repository
 
         public NotaFiscal GetNotaFiscal(int id)
         {
-            return _context.NotasFiscais.Where(n => n.Id == id).FirstOrDefault();
+            return _context.NotasFiscais
+                    .Include(n => n.Cliente)
+                    .Include(n => n.Fornecedor)
+                    .Include(n => n.NotaFiscalProdutos)
+                    .ThenInclude(nfp => nfp.Produto)
+                    .Where(n => n.Id == id)
+                    .FirstOrDefault();
         }
 
         public bool NotaFiscalExiste(int id)
@@ -36,33 +42,32 @@ namespace NF.Repository
                 .ToList();
         }
 
-        public bool CreateNotaFiscal(int id, NotaFiscal notaFiscal)
+        public bool CreateNotaFiscal(NotaFiscal notaFiscal)
         {
-            var notaFiscalProdutoEntity = _context.Produtos.Where(x => x.Id == id).FirstOrDefault();
-
-            var notaFiscalProduto = new NotaFiscalProduto()
-            {
-                Produto = notaFiscalProdutoEntity,
-                NotaFiscal = notaFiscal,
-            };
-
-            _context.Add(notaFiscalProduto);
 
             _context.Add(notaFiscal);
-
             return Save();
+
         }
 
         public bool Save()
         {
-            var saved = _context.SaveChanges();
-            return saved > 0 ? true : false;
-        }
-
-        public bool UpdateNotaFiscal(int id, NotaFiscal notaFiscal)
-        {
-            _context.Update(notaFiscal);
-            return Save();
+            using (var transaction = _context.Database.BeginTransaction())
+            {
+                try
+                {
+                    _context.SaveChanges();
+                    transaction.Commit();
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    transaction.Rollback();
+                    // Handle the exception or log it
+                    Console.WriteLine($"Error creating NotaFiscal: {ex.Message}");
+                    return false;
+                }
+            }
         }
 
         public bool DeleteNotaFiscal(NotaFiscal notaFiscal)

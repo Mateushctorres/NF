@@ -105,3 +105,4 @@ C:\Users\mateu\Documents\NF\NF\obj\Debug\net8.0\ref\NF.dll
 C:\Users\mateu\Documents\NF\NF\bin\Debug\net8.0\AutoMapper.dll
 C:\Users\mateu\Documents\NF\NF\bin\Debug\net8.0\AutoMapper.Extensions.Microsoft.DependencyInjection.dll
 C:\Users\mateu\Documents\NF\NF\bin\Debug\net8.0\libman.json
+C:\Users\mateu\Documents\NF\NF\obj\Debug\net8.0\NF.sourcelink.json

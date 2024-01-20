@@ -8,15 +8,19 @@ namespace NF.Helper
     {
         public MappingProfiles()
         {
-            CreateMap<NotaFiscal, NotaFiscalDto>();
-            CreateMap<NotaFiscalDto, NotaFiscal>();
+            CreateMap<NotaFiscal, NotaFiscalDto>()
+                .ForMember(dest => dest.Produtos, opt => opt.MapFrom(src => src.NotaFiscalProdutos));
+
+            CreateMap<NotaFiscalDto, NotaFiscal>();            
             CreateMap<Cliente, ClienteDto>();
             CreateMap<ClienteDto, Cliente>();
             CreateMap<Fornecedor, FornecedorDto>();
             CreateMap<FornecedorDto, Fornecedor>();
             CreateMap<Produto, ProdutoDto>();
             CreateMap<ProdutoDto, Produto>();
-            CreateMap<NotaFiscalProduto, NotaFiscalProdutoDto>();
+            CreateMap<NotaFiscalProduto, NotaFiscalProdutoDto>()
+                .ForMember(dest => dest.Produto, opt => opt.MapFrom(src => src.Produto));
+
             CreateMap<NotaFiscalProdutoDto, NotaFiscalProduto>();
         }
     }

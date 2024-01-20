@@ -36,6 +36,7 @@ namespace NF.Data
                 .HasOne(p => p.Produto)
                 .WithMany(pc => pc.NotaFiscalProdutos)
                 .HasForeignKey(c => c.ProdutoId);
+
         }
 
     }

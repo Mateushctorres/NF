@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using NF.Data;
 using NF.Dto;
 using NF.Interfaces;
@@ -15,13 +16,19 @@ namespace NF.Controllers
         private readonly INotaFiscalRepository _notaFiscalRepository;
         private readonly IProdutoRepository produtoRepository;
         private readonly IMapper _mapper;
+        private readonly IFornecedorRepository fornecedorRepository;
+        private readonly IClienteRepository clienteRepository;
 
         public NotaFiscalController(INotaFiscalRepository notaFiscalRepository,
             IProdutoRepository produtoRepository,
+            IFornecedorRepository fornecedorRepository,
+            IClienteRepository clienteRepository,
             IMapper mapper)
         {
             _notaFiscalRepository = notaFiscalRepository;
             this.produtoRepository = produtoRepository;
+            this.fornecedorRepository = fornecedorRepository;
+            this.clienteRepository = clienteRepository;
             _mapper = mapper;
         }
 
@@ -29,7 +36,7 @@ namespace NF.Controllers
         [ProducesResponseType(200, Type = typeof(IEnumerable<NotaFiscal>))]
         public IActionResult GetNotasFiscais()
         {
-            var notasFiscais = _mapper.Map<List<NotaFiscalDto>>(_notaFiscalRepository.GetNotasFiscais());
+            var notasFiscais = _notaFiscalRepository.GetNotasFiscais();
 
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -45,7 +52,7 @@ namespace NF.Controllers
             if (!_notaFiscalRepository.NotaFiscalExiste(Id))
                 return NotFound();
 
-            var notaFiscal = _mapper.Map<NotaFiscalDto>(_notaFiscalRepository.GetNotaFiscal(Id));
+            var notaFiscal = _notaFiscalRepository.GetNotaFiscal(Id);
 
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -53,26 +60,73 @@ namespace NF.Controllers
             return Ok(notaFiscal);
         }
 
-        [HttpPost("{Id}")]
+        [HttpPost]
         [ProducesResponseType(204)]
         [ProducesResponseType(400)]
-        public IActionResult CreateNotaFiscal([FromRoute] int Id, [FromBody] NotaFiscalDto notaFiscalCreate)
+        public IActionResult CreateNotaFiscal( [FromBody] NotaFiscalDto notaFiscalCreate)
         {
             if (notaFiscalCreate == null)
                 return BadRequest(ModelState);
 
-            if (_notaFiscalRepository.NotaFiscalExiste(Id))
+            if (_notaFiscalRepository.NotaFiscalExiste(notaFiscalCreate.Id))
             {
                 ModelState.AddModelError("", "Nota Fiscal já existe");
                 return StatusCode(422, ModelState);
             }
+            
+            var cliente = clienteRepository.ClienteExiste(notaFiscalCreate.ClienteId);
+            var fornecedor = fornecedorRepository.FornecedorExiste(notaFiscalCreate.FornecedorId);
+
+            if (!fornecedor)
+                return BadRequest("Invalid FornecedorId");
+
+            if (!cliente)
+                return BadRequest("Invalid ClienteId");
 
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var notaFiscalMap = _mapper.Map<NotaFiscal>(notaFiscalCreate);
+            var clienteNota = clienteRepository.GetCliente(notaFiscalCreate.ClienteId);            
+            var fornecedorNota = fornecedorRepository.GetFornecedor(notaFiscalCreate.FornecedorId);
 
-            if (!_notaFiscalRepository.CreateNotaFiscal(Id, notaFiscalMap))
+            var notaFiscal = new NotaFiscal
+            {
+                Cliente = clienteNota,
+                Fornecedor = fornecedorNota,
+                NumeroNota = notaFiscalCreate.NumeroNota,
+            };
+
+            var valorTotal = 0f;
+
+            foreach (var produtoQuantidade in notaFiscalCreate.Produtos)
+            {
+                var produto = produtoRepository.GetProduto(produtoQuantidade.ProdutoId);
+
+                if (produto != null)
+                {
+                    var nfp = new NotaFiscalProduto
+                    {
+                        NotaFiscal = notaFiscal,
+                        Produto = produto,
+                        Quantidade = produtoQuantidade.Quantidade,
+                    };
+
+                    valorTotal += produto.Preco * produtoQuantidade.Quantidade;
+
+                    notaFiscal.NotaFiscalProdutos.Add(nfp);
+                } else
+                {
+                    
+                    ModelState.AddModelError("", "Erro ao criar a nota. Produto não existe.");
+                    return StatusCode(500, ModelState);
+                    
+                }
+            }
+
+            notaFiscal.ValorTotal = valorTotal;
+
+
+            if (!_notaFiscalRepository.CreateNotaFiscal(notaFiscal))
             {
                 ModelState.AddModelError("", "Algo deu errado ao tentar salvar");
                 return StatusCode(500, ModelState);
@@ -80,36 +134,6 @@ namespace NF.Controllers
 
             return Ok("Criado com sucesso");
 
-        }
-
-        [HttpPut("{Id}")]
-        [ProducesResponseType(400)]
-        [ProducesResponseType(204)]
-        [ProducesResponseType(404)]
-
-        public IActionResult UpdateNotaFiscal(int Id, [FromBody] NotaFiscalDto updatedNotaFiscal)
-        {
-            if (updatedNotaFiscal == null)
-                return BadRequest(ModelState);
-
-            if (Id != updatedNotaFiscal.Id)
-                return BadRequest(ModelState);
-
-            if (!_notaFiscalRepository.NotaFiscalExiste(Id))
-                return NotFound();
-
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            var notaFiscalMap = _mapper.Map<NotaFiscal>(updatedNotaFiscal);
-
-            if (!_notaFiscalRepository.UpdateNotaFiscal(Id, notaFiscalMap))
-            {
-                ModelState.AddModelError("", "Algo deu errado atualizando o notaFiscal");
-                return StatusCode(500, ModelState);
-            }
-
-            return NoContent();
         }
 
         [HttpDelete("{Id}")]

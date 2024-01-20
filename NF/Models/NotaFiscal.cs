@@ -10,8 +10,7 @@ namespace NF.Models
         public float ValorTotal { get; set; }
         public Cliente Cliente { get; set; }
         public Fornecedor Fornecedor { get; set; }
-        [JsonIgnore]
-        public ICollection<NotaFiscalProduto> NotaFiscalProdutos { get; set; }
-        
+        public ICollection<NotaFiscalProduto> NotaFiscalProdutos { get; set; } = new List<NotaFiscalProduto>();
+
     }
 }
